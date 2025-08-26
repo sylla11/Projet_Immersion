@@ -13,6 +13,28 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - backend
+
+  python:
+    build:
+      context: .
+      dockerfile: Dockerfile-python
+    container_name: python-inserter
+    volumes:
+      - ./insertion_scripts:/usr/src/insertion_scripts
+      - ./daily_data:/usr/src/daily_data
+    depends_on:
+      - db
+    networks:
+      - backend
+    command: tail -f /dev/null   # garde le conteneur actif
 
 volumes:
-  pgdata:
+  pgdata: {}   # mapping correct
+
+networks:
+  backend:
+    driver: bridge
+
+
