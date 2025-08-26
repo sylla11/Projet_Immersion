@@ -3,57 +3,49 @@
 -- ========================
 
 CREATE TABLE HUB_Customers (
-    CustomerID SERIAL PRIMARY KEY,
-    CustomerBK VARCHAR(255) NOT NULL,
+    CustomerId SERIAL PRIMARY KEY,
     LoadDate TIMESTAMP NOT NULL,
     Source VARCHAR(255)
 );
 
 CREATE TABLE HUB_Company (
-    CompanyID SERIAL PRIMARY KEY,
-    CompanyBK VARCHAR(255) NOT NULL,
+    CompanyId SERIAL PRIMARY KEY,
     LoadDate TIMESTAMP NOT NULL,
     Source VARCHAR(255)
 );
 
 CREATE TABLE HUB_Locations (
-    LocationID SERIAL PRIMARY KEY,
-    LocationBK VARCHAR(255) NOT NULL,
+    LocationId SERIAL PRIMARY KEY,
     LoadDate TIMESTAMP NOT NULL,
     Source VARCHAR(255)
 );
 
 CREATE TABLE HUB_Employees (
-    EmployeeID SERIAL PRIMARY KEY,
-    EmployeeBK VARCHAR(255) NOT NULL,
+    EmployeeId SERIAL PRIMARY KEY,
     LoadDate TIMESTAMP NOT NULL,
     Source VARCHAR(255)
 );
 
 CREATE TABLE HUB_Invoices (
-    InvoiceID SERIAL PRIMARY KEY,
-    InvoiceBK VARCHAR(255) NOT NULL,
+    InvoiceId SERIAL PRIMARY KEY,
     LoadDate TIMESTAMP NOT NULL,
     Source VARCHAR(255)
 );
 
 CREATE TABLE HUB_InvoiceLine (
-    InvoiceLineID SERIAL PRIMARY KEY,
-    InvoiceLineBK VARCHAR(255) NOT NULL,
+    InvoiceLineId SERIAL PRIMARY KEY,
     LoadDate TIMESTAMP NOT NULL,
     Source VARCHAR(255)
 );
 
 CREATE TABLE HUB_Tracks (
-    TrackID SERIAL PRIMARY KEY,
-    TrackBK VARCHAR(255) NOT NULL,
+    TrackId SERIAL PRIMARY KEY,
     LoadDate TIMESTAMP NOT NULL,
     Source VARCHAR(255)
 );
 
 CREATE TABLE HUB_Titles (
-    TitleID SERIAL PRIMARY KEY,
-    TitleBK VARCHAR(255) NOT NULL,
+    TitleId SERIAL PRIMARY KEY,
     LoadDate TIMESTAMP NOT NULL,
     Source VARCHAR(255)
 );
@@ -63,74 +55,74 @@ CREATE TABLE HUB_Titles (
 -- ========================
 
 CREATE TABLE LINK_CustomerCompany (
-    CustomerCompanyID SERIAL PRIMARY KEY,
-    CustomerID INT REFERENCES HUB_Customers(CustomerID),
-    CompanyID INT REFERENCES HUB_Company(CompanyID),
+    CustomerCompanyId SERIAL PRIMARY KEY,
+    CustomerId INT REFERENCES HUB_Customers(CustomerId),
+    CompanyId INT REFERENCES HUB_Company(CompanyId),
     LoadDate TIMESTAMP NOT NULL,
     Source VARCHAR(255)
 );
 
 CREATE TABLE LINK_CustomerLocation (
-    CustomerLocationID SERIAL PRIMARY KEY,
-    CustomerID INT REFERENCES HUB_Customers(CustomerID),
-    LocationID INT REFERENCES HUB_Locations(LocationID),
+    CustomerLocationId SERIAL PRIMARY KEY,
+    CustomerId INT REFERENCES HUB_Customers(CustomerId),
+    LocationId INT REFERENCES HUB_Locations(LocationId),
     LoadDate TIMESTAMP NOT NULL,
     Source VARCHAR(255)
 );
 
 CREATE TABLE LINK_CustomerInvoice (
-    CustomerInvoiceID SERIAL PRIMARY KEY,
-    CustomerID INT REFERENCES HUB_Customers(CustomerID),
-    InvoiceID INT REFERENCES HUB_Invoices(InvoiceID),
+    CustomerInvoiceId SERIAL PRIMARY KEY,
+    CustomerId INT REFERENCES HUB_Customers(CustomerId),
+    InvoiceId INT REFERENCES HUB_Invoices(InvoiceId),
     LoadDate TIMESTAMP NOT NULL,
     Source VARCHAR(255)
 );
 
 CREATE TABLE LINK_EmployeeCustomer (
-    EmployeeCustomerID SERIAL PRIMARY KEY,
-    CustomerID INT REFERENCES HUB_Customers(CustomerID),
-    EmployeeID INT REFERENCES HUB_Employees(EmployeeID),
+    EmployeeCustomerId SERIAL PRIMARY KEY,
+    CustomerId INT REFERENCES HUB_Customers(CustomerId),
+    EmployeeId INT REFERENCES HUB_Employees(EmployeeId),
     LoadDate TIMESTAMP NOT NULL,
     Source VARCHAR(255)
 );
 
 CREATE TABLE LINK_EmployeeInvoice (
-    EmployeeInvoiceID SERIAL PRIMARY KEY,
-    EmployeeID INT REFERENCES HUB_Employees(EmployeeID),
-    InvoiceID INT REFERENCES HUB_Invoices(InvoiceID),
+    EmployeeInvoiceId SERIAL PRIMARY KEY,
+    EmployeeId INT REFERENCES HUB_Employees(EmployeeId),
+    InvoiceId INT REFERENCES HUB_Invoices(InvoiceId),
     LoadDate TIMESTAMP NOT NULL,
     Source VARCHAR(255)
 );
 
 CREATE TABLE LINK_EmployeeLocation (
-    EmployeeLocationID SERIAL PRIMARY KEY,
-    EmployeeID INT REFERENCES HUB_Employees(EmployeeID),
-    LocationID INT REFERENCES HUB_Locations(LocationID),
+    EmployeeLocationId SERIAL PRIMARY KEY,
+    EmployeeId INT REFERENCES HUB_Employees(EmployeeId),
+    LocationId INT REFERENCES HUB_Locations(LocationId),
     LoadDate TIMESTAMP NOT NULL,
     Source VARCHAR(255)
 );
 
 CREATE TABLE LINK_EmployeeTitle (
-    EmployeeTitleID SERIAL PRIMARY KEY,
-    EmployeeID INT REFERENCES HUB_Employees(EmployeeID),
-    TitleID INT REFERENCES HUB_Titles(TitleID),
+    EmployeeTitleId SERIAL PRIMARY KEY,
+    EmployeeId INT REFERENCES HUB_Employees(EmployeeId),
+    TitleId INT REFERENCES HUB_Titles(TitleId),
     LoadDate TIMESTAMP NOT NULL,
     Source VARCHAR(255),
     AppointmentDate DATE
 );
 
 CREATE TABLE LINK_InvoiceInvoiceLine (
-    InvoiceInvoiceLineID SERIAL PRIMARY KEY,
-    InvoiceLineID INT REFERENCES HUB_InvoiceLine(InvoiceLineID),
-    InvoiceID INT REFERENCES HUB_Invoices(InvoiceID),
+    InvoiceInvoiceLineId SERIAL PRIMARY KEY,
+    InvoiceLineId INT REFERENCES HUB_InvoiceLine(InvoiceLineId),
+    InvoiceId INT REFERENCES HUB_Invoices(InvoiceId),
     LoadDate TIMESTAMP NOT NULL,
     Source VARCHAR(255)
 );
 
 CREATE TABLE LINK_InvoiceLineTrack (
-    InvoiceLineTrackID SERIAL PRIMARY KEY,
-    InvoiceLineID INT REFERENCES HUB_InvoiceLine(InvoiceLineID),
-    TrackID INT REFERENCES HUB_Tracks(TrackID),
+    InvoiceLineTrackId SERIAL PRIMARY KEY,
+    InvoiceLineId INT REFERENCES HUB_InvoiceLine(InvoiceLineId),
+    TrackId INT REFERENCES HUB_Tracks(TrackId),
     LoadDate TIMESTAMP NOT NULL,
     Source VARCHAR(255)
 );
@@ -140,8 +132,8 @@ CREATE TABLE LINK_InvoiceLineTrack (
 -- ========================
 
 CREATE TABLE SAT_Customer (
-    SAT_CustomerID SERIAL PRIMARY KEY,
-    CustomerID INT REFERENCES HUB_Customers(CustomerID),
+    SAT_CustomerId SERIAL PRIMARY KEY,
+    CustomerId INT REFERENCES HUB_Customers(CustomerId),
     CustomerFirstName VARCHAR(255),
     CustomerLastName VARCHAR(255),
     CustomerPhone VARCHAR(50),
@@ -151,16 +143,16 @@ CREATE TABLE SAT_Customer (
 );
 
 CREATE TABLE SAT_Company (
-    SAT_CompanyID SERIAL PRIMARY KEY,
-    CompanyID INT REFERENCES HUB_Company(CompanyID),
+    SAT_CompanyId SERIAL PRIMARY KEY,
+    CompanyId INT REFERENCES HUB_Company(CompanyId),
     CompanyName VARCHAR(255),
     LoadDate TIMESTAMP NOT NULL,
     Source VARCHAR(255)
 );
 
 CREATE TABLE SAT_Location (
-    SAT_LocationID SERIAL PRIMARY KEY,
-    LocationID INT REFERENCES HUB_Locations(LocationID),
+    SAT_LocationId SERIAL PRIMARY KEY,
+    LocationId INT REFERENCES HUB_Locations(LocationId),
     City VARCHAR(255),
     Country VARCHAR(255),
     State VARCHAR(255),
@@ -171,8 +163,8 @@ CREATE TABLE SAT_Location (
 );
 
 CREATE TABLE SAT_Employee (
-    SAT_EmployeeID SERIAL PRIMARY KEY,
-    EmployeeID INT REFERENCES HUB_Employees(EmployeeID),
+    SAT_EmployeeId SERIAL PRIMARY KEY,
+    EmployeeId INT REFERENCES HUB_Employees(EmployeeId),
     EmployeeFirstName VARCHAR(255),
     EmployeeLastName VARCHAR(255),
     EmployeeBirthDate DATE,
@@ -185,39 +177,39 @@ CREATE TABLE SAT_Employee (
 );
 
 CREATE TABLE SAT_Invoice (
-    SAT_InvoiceID SERIAL PRIMARY KEY,
-    InvoiceID INT REFERENCES HUB_Invoices(InvoiceID),
+    SAT_InvoiceId SERIAL PRIMARY KEY,
+    InvoiceId INT REFERENCES HUB_Invoices(InvoiceId),
     InvoiceDate DATE,
     LoadDate TIMESTAMP NOT NULL,
     Source VARCHAR(255)
 );
 
 CREATE TABLE SAT_InvoiceLine (
-    SAT_InvoiceLineID SERIAL PRIMARY KEY,
-    InvoiceLineID INT REFERENCES HUB_InvoiceLine(InvoiceLineID),
+    SAT_InvoiceLineId SERIAL PRIMARY KEY,
+    InvoiceLineId INT REFERENCES HUB_InvoiceLine(InvoiceLineId),
     Quantity INT,
     LoadDate TIMESTAMP NOT NULL,
     Source VARCHAR(255)
 );
 
 CREATE TABLE SAT_Track (
-    SAT_TrackID SERIAL PRIMARY KEY,
-    TrackID INT REFERENCES HUB_Tracks(TrackID),
+    SAT_TrackId SERIAL PRIMARY KEY,
+    TrackId INT REFERENCES HUB_Tracks(TrackId),
     UnitPrice NUMERIC(10,2),
     LoadDate TIMESTAMP NOT NULL,
     Source VARCHAR(255)
 );
 
 CREATE TABLE SAT_Title (
-    SAT_TitleID SERIAL PRIMARY KEY,
-    TitleID INT REFERENCES HUB_Titles(TitleID),
+    SAT_TitleId SERIAL PRIMARY KEY,
+    TitleId INT REFERENCES HUB_Titles(TitleId),
     LoadDate TIMESTAMP NOT NULL,
     Source VARCHAR(255)
 );
 
 CREATE TABLE SAT_EmployeeTitle (
-    SAT_EmployeeTitleID SERIAL PRIMARY KEY,
-    EmployeeTitleID INT REFERENCES LINK_EmployeeTitle(EmployeeTitleID),
+    SAT_EmployeeTitleId SERIAL PRIMARY KEY,
+    EmployeeTitleId INT REFERENCES LINK_EmployeeTitle(EmployeeTitleId),
     AppointmentDate DATE,
     LoadDate TIMESTAMP NOT NULL,
     Source VARCHAR(255)
