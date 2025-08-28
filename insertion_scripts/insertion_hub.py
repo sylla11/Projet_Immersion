@@ -3,11 +3,10 @@ import pandas as pd
 import psycopg2
 from psycopg2.extras import execute_values
 from datetime import datetime
-import uuid
 
 # --- CONFIGURATION ---
 docker_db_config = {
-    'host': 'my-postgres',
+    'host': 'db',  
     'port': 5432,
     'database': 'mydatabase',
     'user': 'sylla',
@@ -15,7 +14,7 @@ docker_db_config = {
 }
 
 csv_folder = "/usr/src/daily_data"
-processed_files_path = os.path.join(csv_folder, "processed_files_hub.txt")
+processed_files_path = os.path.join(csv_folder, "processed_files_link.txt")
 
 # --- CONNEXION A POSTGRES ---
 def connect_db():
@@ -31,62 +30,83 @@ def get_csv_files():
     new_files = [f for f in all_files if f not in processed_files]
     return new_files, processed_files
 
-# --- GENERATION AUTOMATIQUE D'ID pour les 3 colonnes spécifiques ---
-def ensure_specific_ids(df):
-    for col, prefix in [('CompanyId','COMP'), ('LocationId','LOC'), ('TitleId','TITLE')]:
-        if col not in df.columns:
-            df[col] = [f"{prefix}_{uuid.uuid4().hex[:8]}" for _ in range(len(df))]
-            print(f"⚠️ Colonne {col} manquante, génération d'IDs uniques.")
-        else:
-            df[col] = df[col].astype(str)
+# --- NORMALISER LES NOMS DE COLONNES (insensible à la casse) ---
+def normalize_columns(df):
+    df.columns = [c.strip() for c in df.columns]  # enlever espaces
+    df.columns = [c[0].upper() + c[1:] if c else c for c in df.columns]  # majuscule initiale
     return df
 
-# --- INSERTION DANS LA BASE ---
-def insert_hub(conn, table_name, df, id_col):
-    if id_col not in df.columns:
-        print(f"⚠️ Colonne {id_col} absente dans le CSV, on saute {table_name}")
-        return
-    df_to_insert = df.copy()
-    df_to_insert['source'] = 'datadaily'
-    df_to_insert['loadDate'] = datetime.now()
-    
+# --- GÉNÉRER UNE COLONNE D’ID SI ABSENTE ---
+def ensure_column(df, col_name):
+    col_norm = next((c for c in df.columns if c.lower() == col_name.lower()), None)
+    if not col_norm:
+        df[col_name] = range(1, len(df)+1)
+        print(f"⚠️ Colonne {col_name} absente ou vide, génération d'IDs séquentiels.")
+    else:
+        df[col_norm] = df[col_norm].fillna(range(1, len(df)+1))
+        if df[col_norm].isnull().any():
+            print(f"⚠️ Colonne {col_name} contient des valeurs nulles, génération d'IDs séquentiels pour les manquants.")
+    return df
+
+# --- INSERTION LINK ---
+def insert_link(conn, table_name, df, link_id_col, foreign_cols, appointment=False):
+    df = normalize_columns(df)
+    df = ensure_column(df, link_id_col)
+    for col in foreign_cols:
+        df = ensure_column(df, col)
+
+    df['Source'] = 'datadaily'
+    df['LoadDate'] = datetime.now()
+    if appointment:
+        df['AppointmentDate'] = datetime.now()
+
+    # Colonnes exactes à insérer
+    cols_to_insert = [link_id_col] + foreign_cols + (['AppointmentDate'] if appointment else []) + ['Source','LoadDate']
+    df_to_insert = df[cols_to_insert].copy()
+
     tuples = [tuple(x) for x in df_to_insert.to_numpy()]
-    cols = ','.join(df_to_insert.columns)
-    query = f"INSERT INTO {table_name} ({cols}) VALUES %s ON CONFLICT DO NOTHING"
-    
+    cols_sql = ','.join([f'"{c}"' for c in df_to_insert.columns])
+    query = f'INSERT INTO {table_name} ({cols_sql}) VALUES %s ON CONFLICT DO NOTHING'
+
     with conn.cursor() as cur:
         execute_values(cur, query, tuples)
         conn.commit()
+
+    print(f"➡️ Insertion dans {table_name}: {len(df_to_insert)} lignes")
 
 # --- SCRIPT PRINCIPAL ---
 def main():
     conn = connect_db()
     new_files, processed_files = get_csv_files()
-    
+
+    if not new_files:
+        print("ℹ️ Aucun nouveau fichier CSV à traiter.")
+        conn.close()
+        return
+
     for file in new_files:
         file_path = os.path.join(csv_folder, file)
         df = pd.read_csv(file_path)
+        df = normalize_columns(df)
 
-        # Génération automatique uniquement pour CompanyId, LocationId, TitleId
-        df = ensure_specific_ids(df)
+        # Insertion LINK tables
+        insert_link(conn, 'link_customercompany', df, 'CustomerCompanyId', ['CustomerId','CompanyId'])
+        insert_link(conn, 'link_customerlocation', df, 'CustomerLocationId', ['CustomerId','LocationId'])
+        insert_link(conn, 'link_customerinvoice', df, 'CustomerInvoiceId', ['CustomerId','InvoiceId'])
+        insert_link(conn, 'link_employeecustomer', df, 'EmployeeCustomerId', ['CustomerId','EmployeeId'])
+        insert_link(conn, 'link_employeelocation', df, 'EmployeeLocationId', ['EmployeeId','LocationId'])
+        insert_link(conn, 'link_employeeinvoice', df, 'EmployeeInvoiceId', ['EmployeeId','InvoiceId'])
+        insert_link(conn, 'link_employeetitle', df, 'EmployeeTitleId', ['EmployeeId','TitleId'], appointment=True)
+        insert_link(conn, 'link_invoiceinvoiceline', df, 'InvoiceInvoiceLineId', ['InvoiceLineId','InvoiceId'])
+        insert_link(conn, 'link_invoicelinetrack', df, 'InvoiceLineTrackId', ['InvoiceLineId','TrackId'])
 
-        # Insertion dans les HUB tables
-        insert_hub(conn, 'hub_customers', df, 'CustomerId')
-        insert_hub(conn, 'hub_employees', df, 'EmployeeId')
-        insert_hub(conn, 'hub_locations', df, 'LocationId')
-        insert_hub(conn, 'hub_company', df, 'CompanyId')
-        insert_hub(conn, 'hub_titles', df, 'TitleId')
-        insert_hub(conn, 'hub_tracks', df, 'TrackId')
-        insert_hub(conn, 'hub_invoices', df, 'InvoiceId')
-        insert_hub(conn, 'hub_invoiceline', df, 'InvoiceLineId')
-
-        # Ajouter fichier traité à l'historique
+        # Marquer le fichier comme traité
         processed_files.append(file)
         with open(processed_files_path, "a") as f:
             f.write(file + "\n")
-    
+
     conn.close()
-    print("✅ Insertion HUB terminée pour tous les fichiers CSV nouveaux.")
+    print("\n✅ Insertion LINK terminée pour tous les fichiers CSV nouveaux.")
 
 if __name__ == "__main__":
     main()

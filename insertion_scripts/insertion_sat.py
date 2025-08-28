@@ -3,29 +3,25 @@ import pandas as pd
 import psycopg2
 from psycopg2.extras import execute_values
 from datetime import datetime
-import uuid
+import hashlib
 
 # --- CONFIGURATION ---
 docker_db_config = {
-    'host': 'my-postgres',      
-    'port': 5432,               # port exposé du conteneur
+    'host': 'db',
+    'port': 5432,
     'database': 'mydatabase',
     'user': 'sylla',
     'password': 'sylla'
 }
 
-# Dossier contenant les CSV
 csv_folder = "/usr/src/daily_data"
+processed_files_path = os.path.join(csv_folder, "processed_files_sat.txt")
 
-# Historique des fichiers déjà lus pour éviter les doublons
-processed_files_path = os.path.join(csv_folder, "processed_files.txt")
-
-# --- CONNEXION A POSTGRES ---
+# --- Connexion DB ---
 def connect_db():
-    conn = psycopg2.connect(**docker_db_config)
-    return conn
+    return psycopg2.connect(**docker_db_config)
 
-# --- LECTURE DES CSV ---
+# --- Lecture CSV ---
 def get_csv_files():
     all_files = [f for f in os.listdir(csv_folder) if f.endswith('.csv')]
     processed_files = []
@@ -35,104 +31,108 @@ def get_csv_files():
     new_files = [f for f in all_files if f not in processed_files]
     return new_files, processed_files
 
-# --- RENOMMAGE DES COLONNES ---
-def rename_columns(df):
-    mapping = {
-        "CustomerCompany": "CompanyName",
-        "CustomerAddress": "Address",
-        "CustomerCity": "City",
-        "CustomerStat": "State",
-        "CustomerCountry": "Country",
-        "BillingAddress": "Address",
-        "BillingCity": "City",
-        "BillingCountry": "Country",
-        "BillingPostalCode": "PostalCode",
-        "BillingState": "State",
-        "EmployeeTitle": "Title",
-        "EmployeeAddress": "Address",
-        "EmployeeCity": "City",
-        "EmployeeState": "State",
-        "EmployeeCountry": "Country"
-    }
-    df.rename(columns=mapping, inplace=True)
+# --- Normaliser colonnes ---
+def normalize_columns(df):
+    df.columns = [c.strip().lower() for c in df.columns]  # tout en minuscule
     return df
 
-# --- INSERTION DANS LA BASE ---
-def insert_data(conn, table_name, df, id_col_name, selected_columns):
-    df_to_insert = df[selected_columns].copy()
-    df_to_insert[id_col_name] = [str(uuid.uuid4()) for _ in range(len(df_to_insert))]
-    df_to_insert['Source'] = 'datadaily'
-    df_to_insert['LoadDate'] = datetime.now()
-    
-    # Créer la liste des tuples pour insertion
-    tuples = [tuple(x) for x in df_to_insert.to_numpy()]
-    cols = ','.join(df_to_insert.columns)
-    query = f"INSERT INTO {table_name} ({cols}) VALUES %s"
-    
+# --- Génération hashkey ---
+def generate_hashkey(value):
+    return hashlib.md5(str(value).encode()).hexdigest()
+
+# --- Colonnes par table SAT (tout en minuscules) ---
+SAT_CONFIG = {
+    'sat_customer': ('customerid', ['firstname','lastname','phone','email','supportrepid']),
+    'sat_employee': ('employeeid', ['firstname','lastname','birthdate','hiredate','phone','fax','email','reportsto']),
+    'sat_invoice': ('invoiceid', ['invoicedate']),
+    'sat_invoiceline': ('invoicelineid', ['quantity']),
+    'sat_track': ('trackid', ['unitprice']),
+    'sat_company': ('companyid', ['companyname']),
+    'sat_location': ('locationid', ['address','city','state','country','postalcode']),
+    'sat_title': ('titleid', ['title'])
+}
+
+# --- Récupérer colonnes réelles d’une table ---
+def get_table_columns(conn, table_name):
+    query = f"""
+        SELECT column_name 
+        FROM information_schema.columns 
+        WHERE table_name = %s
+    """
+    with conn.cursor() as cur:
+        cur.execute(query, (table_name,))
+        return [row[0] for row in cur.fetchall()]
+
+# --- Préparer données SAT ---
+def prepare_sat(df, table_name, bk_col, attr_cols):
+    if bk_col not in df.columns:
+        df[bk_col] = range(1, len(df)+1)  # générer ID si absent
+
+    sat_df = pd.DataFrame()
+    sat_df[bk_col] = df[bk_col]
+
+    # hashkey à partir de la BK
+    hash_col = table_name.replace("sat_", "") + "_hashkey"
+    sat_df[hash_col] = sat_df[bk_col].apply(generate_hashkey)
+
+    for col in attr_cols:
+        sat_df[col] = df[col] if col in df.columns else None
+
+    sat_df["loaddate"] = datetime.now()
+    sat_df["source"] = "data_daily"
+
+    return sat_df
+
+# --- Insertion robuste ---
+def insert_sat(conn, table_name, df):
+    bk_col, attr_cols = SAT_CONFIG[table_name]
+    sat_df = prepare_sat(df, table_name, bk_col, attr_cols)
+
+    # Colonnes de la table réelle
+    table_cols = get_table_columns(conn, table_name)
+
+    # On garde uniquement l’intersection (pour éviter l’erreur UndefinedColumn)
+    final_cols = [c for c in sat_df.columns if c in table_cols]
+
+    if not final_cols:
+        print(f"⚠️ Aucune colonne valide trouvée pour {table_name}, rien inséré.")
+        return
+
+    sat_df = sat_df[final_cols]
+
+    tuples = [tuple(x) for x in sat_df.to_numpy()]
+    cols_sql = ','.join(final_cols)
+    query = f'INSERT INTO {table_name} ({cols_sql}) VALUES %s ON CONFLICT DO NOTHING'
+
     with conn.cursor() as cur:
         execute_values(cur, query, tuples)
         conn.commit()
+    print(f"➡️ Insertion dans {table_name}: {len(sat_df)} lignes")
 
-# --- SCRIPT PRINCIPAL ---
+# --- Script principal ---
 def main():
     conn = connect_db()
     new_files, processed_files = get_csv_files()
-    
+
+    if not new_files:
+        print("ℹ️ Aucun nouveau fichier CSV à traiter.")
+        conn.close()
+        return
+
     for file in new_files:
         file_path = os.path.join(csv_folder, file)
         df = pd.read_csv(file_path)
-        df = rename_columns(df)
-        
-        # SAT_Customer
-        insert_data(conn, 'SAT_Customer', df, 'SAT_CustomerId', [
-            'CustomerPhone', 'CustomerEmail', 'CustomerSupportRepId',
-            'CustomerId', 'CustomerFirstName', 'CustomerLastName'
-        ])
-        
-        # SAT_Employee
-        insert_data(conn, 'SAT_Employee', df, 'SAT_EmployeeId', [
-            'EmployeeId', 'EmployeeFirstName', 'EmployeeLastName', 
-            'EmployeeBirthDate', 'EmployeeHireDate', 'EmployeePhone',
-            'EmployeeFax', 'EmployeeEmail', 'EmployeeReportsTo'
-        ])
-        
-        # SAT_Location
-        insert_data(conn, 'SAT_Location', df, 'SAT_LocationId', [
-            'LocationId', 'Address', 'City', 'Country'
-        ])
-        
-        # SAT_Invoiceline
-        insert_data(conn, 'SAT_Invoiceline', df, 'SAT_InvoicelineId', [
-            'InvoicelineId', 'Quantity'
-        ])
-        
-        # SAT_Track
-        insert_data(conn, 'SAT_Track', df, 'SAT_TrackId', [
-            'TrackId', 'UnitPrice'
-        ])
-        
-        # SAT_Invoice
-        insert_data(conn, 'SAT_Invoice', df, 'SAT_InvoiceId', [
-            'InvoiceId', 'InvoiceDate'
-        ])
-        
-        # SAT_Company
-        insert_data(conn, 'SAT_Company', df, 'SAT_CompanyId', [
-            'CompanyId', 'CompanyName'
-        ])
-        
-        # SAT_Title
-        insert_data(conn, 'SAT_Title', df, 'SAT_TitleId', [
-            'TitleId', 'Title'
-        ])
-        
-        # Ajouter fichier traité à l'historique
+        df = normalize_columns(df)
+
+        for table_name in SAT_CONFIG.keys():
+            insert_sat(conn, table_name, df)
+
         processed_files.append(file)
         with open(processed_files_path, "a") as f:
             f.write(file + "\n")
-    
+
     conn.close()
-    print("Traitement terminé pour tous les fichiers CSV nouveaux.")
+    print("\n✅ Insertion SAT terminée pour tous les fichiers CSV nouveaux.")
 
 if __name__ == "__main__":
     main()

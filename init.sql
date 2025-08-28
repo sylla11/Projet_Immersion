@@ -3,7 +3,7 @@
 -- ========================
 
 CREATE TABLE HUB_Customers (
-    CustomerId SERIAL PRIMARY KEY,
+    CustomerId INT PRIMARY KEY,
     LoadDate TIMESTAMP NOT NULL,
     Source VARCHAR(255)
 );
@@ -21,25 +21,25 @@ CREATE TABLE HUB_Locations (
 );
 
 CREATE TABLE HUB_Employees (
-    EmployeeId SERIAL PRIMARY KEY,
+    EmployeeId INT PRIMARY KEY,
     LoadDate TIMESTAMP NOT NULL,
     Source VARCHAR(255)
 );
 
 CREATE TABLE HUB_Invoices (
-    InvoiceId SERIAL PRIMARY KEY,
+    InvoiceId INT PRIMARY KEY,
     LoadDate TIMESTAMP NOT NULL,
     Source VARCHAR(255)
 );
 
 CREATE TABLE HUB_InvoiceLine (
-    InvoiceLineId SERIAL PRIMARY KEY,
+    InvoiceLineId INT PRIMARY KEY,
     LoadDate TIMESTAMP NOT NULL,
     Source VARCHAR(255)
 );
 
 CREATE TABLE HUB_Tracks (
-    TrackId SERIAL PRIMARY KEY,
+    TrackId INT PRIMARY KEY,
     LoadDate TIMESTAMP NOT NULL,
     Source VARCHAR(255)
 );
@@ -57,7 +57,6 @@ CREATE TABLE HUB_Titles (
 CREATE TABLE LINK_CustomerCompany (
     CustomerCompanyId SERIAL PRIMARY KEY,
     CustomerId INT REFERENCES HUB_Customers(CustomerId),
-    CompanyId INT REFERENCES HUB_Company(CompanyId),
     LoadDate TIMESTAMP NOT NULL,
     Source VARCHAR(255)
 );
@@ -203,14 +202,6 @@ CREATE TABLE SAT_Track (
 CREATE TABLE SAT_Title (
     SAT_TitleId SERIAL PRIMARY KEY,
     TitleId INT REFERENCES HUB_Titles(TitleId),
-    LoadDate TIMESTAMP NOT NULL,
-    Source VARCHAR(255)
-);
-
-CREATE TABLE SAT_EmployeeTitle (
-    SAT_EmployeeTitleId SERIAL PRIMARY KEY,
-    EmployeeTitleId INT REFERENCES LINK_EmployeeTitle(EmployeeTitleId),
-    AppointmentDate DATE,
     LoadDate TIMESTAMP NOT NULL,
     Source VARCHAR(255)
 );
