@@ -8,12 +8,6 @@ CREATE TABLE HUB_Customers (
     Source VARCHAR(255)
 );
 
-CREATE TABLE HUB_Company (
-    CompanyId SERIAL PRIMARY KEY,
-    LoadDate TIMESTAMP NOT NULL,
-    Source VARCHAR(255)
-);
-
 CREATE TABLE HUB_Locations (
     LocationId SERIAL PRIMARY KEY,
     LoadDate TIMESTAMP NOT NULL,
@@ -53,13 +47,6 @@ CREATE TABLE HUB_Titles (
 -- ========================
 -- LINKS
 -- ========================
-
-CREATE TABLE LINK_CustomerCompany (
-    CustomerCompanyId SERIAL PRIMARY KEY,
-    CustomerId INT REFERENCES HUB_Customers(CustomerId),
-    LoadDate TIMESTAMP NOT NULL,
-    Source VARCHAR(255)
-);
 
 CREATE TABLE LINK_CustomerLocation (
     CustomerLocationId SERIAL PRIMARY KEY,
@@ -141,22 +128,23 @@ CREATE TABLE SAT_Customer (
     Source VARCHAR(255)
 );
 
-CREATE TABLE SAT_Company (
-    SAT_CompanyId SERIAL PRIMARY KEY,
-    CompanyId INT REFERENCES HUB_Company(CompanyId),
-    CompanyName VARCHAR(255),
-    LoadDate TIMESTAMP NOT NULL,
-    Source VARCHAR(255)
-);
-
 CREATE TABLE SAT_Location (
     SAT_LocationId SERIAL PRIMARY KEY,
     LocationId INT REFERENCES HUB_Locations(LocationId),
-    City VARCHAR(255),
-    Country VARCHAR(255),
-    State VARCHAR(255),
-    Address VARCHAR(255),
-    PostalCode VARCHAR(50),
+    CustomerAddress VARCHAR(255),
+    CustomerCity VARCHAR(255),
+    CustomerState VARCHAR(255),
+    CustomerCountry VARCHAR(255),
+    CustomerPostalCode VARCHAR(50),
+    BillingPostalCode VARCHAR(50),
+    BillingAddress VARCHAR(255),
+    BillingCity VARCHAR(255),
+    BillingState VARCHAR(255),
+    BillingCountry VARCHAR(255),
+    EmployeeAddress VARCHAR(255),
+    EmployeeCity VARCHAR(255),
+    EmployeeState VARCHAR(255),
+    EmployeeCountry VARCHAR(255),
     LoadDate TIMESTAMP NOT NULL,
     Source VARCHAR(255)
 );
@@ -170,7 +158,7 @@ CREATE TABLE SAT_Employee (
     EmployeeHireDate DATE,
     EmployeePhone VARCHAR(50),
     EmployeeEmail VARCHAR(255),
-    EmployeeReport VARCHAR(255),
+    EmployeeReportsTo VARCHAR(255),
     LoadDate TIMESTAMP NOT NULL,
     Source VARCHAR(255)
 );
@@ -178,7 +166,7 @@ CREATE TABLE SAT_Employee (
 CREATE TABLE SAT_Invoice (
     SAT_InvoiceId SERIAL PRIMARY KEY,
     InvoiceId INT REFERENCES HUB_Invoices(InvoiceId),
-    InvoiceDate DATE,
+    InvoiceDate TIMESTAMP,
     LoadDate TIMESTAMP NOT NULL,
     Source VARCHAR(255)
 );
