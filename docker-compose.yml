@@ -24,7 +24,7 @@ services:
     volumes:
       - ./daily_data:/usr/src/daily_data
       - ./ETL.py:/usr/src/ETL.py
-      - ./processed_files.log:/usr/src/processed_files.log
+      - ./processed_files.txt:/usr/src/processed_files.txt
     depends_on:
       - db
     networks:

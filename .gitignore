@@ -1,1 +1,9 @@
-"ETL_.py" 
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.DS_Store
+daily_data/
+*.ipynb_checkpoints
+ 
