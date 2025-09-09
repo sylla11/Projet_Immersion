@@ -1,9 +1,24 @@
+# Environnement virtuel
 venv/
+
+# Fichiers Python générés
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
+
+# Fichiers système
 .DS_Store
-daily_data/
+
+# Notebooks checkpoints
 *.ipynb_checkpoints
+
+# Logs
+*.log
+
+# Données brutes et transformées
+daily_data/
+data/raw/
+data/processed/
+
  
